@@ -1,110 +1,137 @@
-import React, { useState } from 'react';
-import { ArrowLeft, Send, Phone } from 'lucide-react';
-import { Input } from '../components/Input';
+import React, { useMemo, useState } from 'react';
+import { ArrowLeft, Phone, Send } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '../components/Avatar';
+import { Button } from '../components/Button';
+import { Input } from '../components/Input';
+import { conversationThreads, getConversationById } from '../data/mockData';
+
 interface ChatPageProps {
   navigate: (page: string, data?: any) => void;
+  pageData?: {
+    conversationId?: string;
+    returnTo?: string;
+    profileId?: string;
+  } | null;
 }
-export function ChatPage({ navigate }: ChatPageProps) {
-  const [message, setMessage] = useState('');
-  const [messages, setMessages] = useState([
-  {
-    id: 1,
-    text: 'Bonjour, le point de rdv est bien devant la gare ?',
-    sender: 'me',
-    time: '10:15'
-  },
-  {
-    id: 2,
-    text: 'Bonjour ! Oui tout à fait, au niveau du dépose-minute.',
-    sender: 'other',
-    time: '10:20'
-  },
-  {
-    id: 3,
-    text: 'Parfait, on se retrouve devant la gare.',
-    sender: 'other',
-    time: '10:30'
-  }]
+
+export function ChatPage({ navigate, pageData }: ChatPageProps) {
+  const conversation = getConversationById(pageData?.conversationId);
+  const initialMessages = useMemo(
+    () => conversationThreads[conversation.id] ?? [],
+    [conversation.id]
   );
+  const [messages, setMessages] = useState(initialMessages);
+  const [message, setMessage] = useState('');
+
   const handleSend = () => {
-    if (!message.trim()) return;
-    setMessages([
-    ...messages,
-    {
-      id: Date.now(),
-      text: message,
-      sender: 'me',
-      time: 'Maintenant'
-    }]
-    );
+    if (!message.trim()) {
+      return;
+    }
+
+    setMessages((current) => [
+      ...current,
+      {
+        id: Date.now(),
+        sender: 'me',
+        text: message,
+        time: 'Maintenant',
+      },
+    ]);
     setMessage('');
   };
+
+  const returnTo = pageData?.returnTo ?? 'messages';
+
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
-      <div className="bg-white px-4 pt-12 pb-4 shadow-sm flex items-center justify-between z-10">
-        <div className="flex items-center">
-          <button
-            onClick={() => navigate('messages')}
-            className="p-2 -ml-2 text-gray-600 mr-2">
-            
-            <ArrowLeft className="w-6 h-6" />
-          </button>
-          <Avatar className="w-10 h-10 mr-3">
-            <AvatarImage src="https://i.pravatar.cc/150?u=1" />
-            <AvatarFallback>SM</AvatarFallback>
-          </Avatar>
-          <div>
-            <h1 className="text-base font-bold text-gray-900">Sophie M.</h1>
-            <p className="text-xs text-[#00C9A7]">En ligne</p>
+    <div className="min-h-screen bg-gray-50 pb-24">
+      <div className="sticky top-0 z-10 bg-white px-4 pb-4 pt-12 shadow-sm">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => navigate(returnTo)}
+              className="rounded-full bg-gray-100 p-2 text-gray-600"
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </button>
+            <button
+              type="button"
+              className="rounded-full"
+              onClick={() =>
+                navigate('public-profile', {
+                  profileId: conversation.participantId,
+                  returnTo: 'chat',
+                  returnData: {
+                    conversationId: conversation.id,
+                    returnTo,
+                  },
+                })
+              }
+            >
+              <Avatar className="h-12 w-12">
+                <AvatarImage src={conversation.avatar} />
+                <AvatarFallback>{conversation.name.charAt(0)}</AvatarFallback>
+              </Avatar>
+            </button>
+            <div>
+              <p className="font-semibold text-gray-900">{conversation.name}</p>
+              <p className="text-xs text-[#00C9A7]">{conversation.routeLabel}</p>
+            </div>
           </div>
+          <button className="rounded-full bg-blue-50 p-3 text-[#0066FF]">
+            <Phone className="h-5 w-5" />
+          </button>
         </div>
-        <button className="p-2 text-[#0066FF] bg-blue-50 rounded-full">
-          <Phone className="w-5 h-5" />
-        </button>
       </div>
 
-      <div className="flex-1 p-4 overflow-y-auto space-y-4">
-        <div className="text-center text-xs text-gray-400 my-4">
-          Aujourd'hui
-        </div>
-
-        {messages.map((msg) =>
-        <div
-          key={msg.id}
-          className={`flex ${msg.sender === 'me' ? 'justify-end' : 'justify-start'}`}>
-          
+      <div className="space-y-4 px-4 py-4">
+        <div className="text-center text-xs text-gray-400">Aujourd'hui</div>
+        {messages.map((item) => (
+          <div
+            key={item.id}
+            className={`flex ${item.sender === 'me' ? 'justify-end' : 'justify-start'}`}
+          >
             <div
-            className={`max-w-[75%] rounded-2xl px-4 py-2 ${msg.sender === 'me' ? 'bg-gradient-to-r from-[#0066FF] to-[#00C9A7] text-white rounded-tr-sm' : 'bg-white border border-gray-100 text-gray-800 rounded-tl-sm shadow-sm'}`}>
-            
-              <p className="text-sm">{msg.text}</p>
+              className={`max-w-[78%] rounded-[1.5rem] px-4 py-3 text-sm shadow-sm ${
+                item.sender === 'me'
+                  ? 'rounded-tr-sm bg-gradient-to-r from-[#0066FF] to-[#00C9A7] text-white'
+                  : 'rounded-tl-sm bg-white text-gray-800'
+              }`}
+            >
+              <p>{item.text}</p>
               <p
-              className={`text-[10px] mt-1 text-right ${msg.sender === 'me' ? 'text-white/80' : 'text-gray-400'}`}>
-              
-                {msg.time}
+                className={`mt-1 text-right text-[11px] ${
+                  item.sender === 'me' ? 'text-white/75' : 'text-gray-400'
+                }`}
+              >
+                {item.time}
               </p>
             </div>
           </div>
-        )}
+        ))}
       </div>
 
-      <div className="bg-white p-4 border-t border-gray-200 pb-safe">
-        <div className="flex items-center space-x-2">
+      <div className="fixed bottom-0 left-0 right-0 border-t border-gray-200 bg-white p-4 pb-safe">
+        <div className="flex items-center gap-2">
           <Input
             value={message}
-            onChange={(e) => setMessage(e.target.value)}
-            placeholder="Écrivez votre message..."
-            className="flex-1 rounded-full bg-gray-100 border-transparent focus-visible:ring-[#0066FF]"
-            onKeyPress={(e) => e.key === 'Enter' && handleSend()} />
-          
-          <button
+            onChange={(event) => setMessage(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter') {
+                handleSend();
+              }
+            }}
+            className="h-12 flex-1 rounded-full border-transparent bg-gray-100 px-4 shadow-none"
+            placeholder="Precisez le point de rendez-vous, l'adresse ou la localisation..."
+          />
+          <Button
+            size="icon"
+            className="h-12 w-12 rounded-full bg-[#0066FF] text-white"
             onClick={handleSend}
-            className="w-10 h-10 rounded-full bg-[#0066FF] flex items-center justify-center text-white shrink-0">
-            
-            <Send className="w-5 h-5 ml-1" />
-          </button>
+          >
+            <Send className="h-4 w-4" />
+          </Button>
         </div>
       </div>
-    </div>);
-
+    </div>
+  );
 }

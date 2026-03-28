@@ -1,174 +1,300 @@
-import React, { useState } from 'react';
-import { ArrowLeft, Car, Filter, MapPin } from 'lucide-react';
-import { Button } from '../components/Button';
-import { Card, CardContent } from '../components/Card';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '../components/Tabs';
+import React, { useMemo, useState } from 'react';
+import {
+  ArrowLeft,
+  Calendar,
+  Car,
+  Map,
+  MapPin,
+  Search,
+  SlidersHorizontal,
+  Users,
+} from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '../components/Avatar';
 import { Badge } from '../components/Badge';
+import { Button } from '../components/Button';
+import { Card, CardContent } from '../components/Card';
+import { Input } from '../components/Input';
+import { MapPlaceholder } from '../components/MapPlaceholder';
+import { SlidingPanel } from '../components/SlidingPanel';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/Tabs';
+import { getProfileById, searchTrips } from '../data/mockData';
+
 interface SearchPageProps {
   navigate: (page: string, data?: any) => void;
+  pageData?: {
+    initialFilters?: {
+      from?: string;
+      to?: string;
+      date?: string;
+      seats?: string;
+    };
+  } | null;
 }
-export function SearchPage({ navigate }: SearchPageProps) {
-  const [view, setView] = useState('list');
-  const trips = [
-  {
-    id: 1,
-    driver: 'Sophie M.',
-    rating: 4.9,
-    from: 'Paris',
-    to: 'Lyon',
-    time: '14:30',
-    price: 25,
-    seats: 2,
-    type: 'planned'
-  },
-  {
-    id: 2,
-    driver: 'Marc D.',
-    rating: 4.7,
-    from: 'Paris (Sud)',
-    to: 'Lyon (Centre)',
-    time: '16:00',
-    price: 20,
-    seats: 3,
-    type: 'planned'
-  },
-  {
-    id: 3,
-    driver: 'Julie L.',
-    rating: 5.0,
-    from: 'Paris',
-    to: 'Lyon',
-    time: 'Immédiat',
-    price: 35,
-    seats: 1,
-    type: 'available'
-  }];
+
+export function SearchPage({ navigate, pageData }: SearchPageProps) {
+  const [filters, setFilters] = useState({
+    from: pageData?.initialFilters?.from ?? 'Paris',
+    to: pageData?.initialFilters?.to ?? 'Lyon',
+    date: pageData?.initialFilters?.date ?? '2026-03-27',
+    seats: pageData?.initialFilters?.seats ?? '1',
+  });
+  const [view, setView] = useState<'list' | 'map'>('list');
+
+  const results = useMemo(() => {
+    return searchTrips.filter((trip) => {
+      const fromMatch = trip.fromCity
+        .toLowerCase()
+        .includes(filters.from.trim().toLowerCase());
+      const toMatch = trip.toCity
+        .toLowerCase()
+        .includes(filters.to.trim().toLowerCase());
+      const seatsMatch = trip.seatsAvailable >= Number(filters.seats || 1);
+      return fromMatch && toMatch && seatsMatch;
+    });
+  }, [filters]);
+
+  const renderTripCard = (tripId: string) => {
+    const trip = searchTrips.find((item) => item.id === tripId);
+    if (!trip) {
+      return null;
+    }
+    const driver = getProfileById(trip.driverId);
+
+    return (
+      <Card
+        key={trip.id}
+        className="cursor-pointer border-none shadow-sm transition hover:shadow-md"
+        onClick={() =>
+          navigate('trip-detail', {
+            tripId: trip.id,
+            returnTo: 'search',
+          })
+        }
+      >
+        <CardContent className="space-y-4 px-5 py-5">
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                className="rounded-full"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  navigate('public-profile', {
+                    profileId: driver.id,
+                    returnTo: 'search',
+                    returnData: {
+                      initialFilters: filters,
+                    },
+                  });
+                }}
+              >
+                <Avatar className="h-12 w-12">
+                  <AvatarImage src={driver.avatar} />
+                  <AvatarFallback>{driver.name.charAt(0)}</AvatarFallback>
+                </Avatar>
+              </button>
+              <div>
+                <p className="text-sm font-semibold text-gray-900">{driver.name}</p>
+                <p className="text-xs text-gray-500">
+                  {driver.rating} ★ • {driver.vehicle}
+                </p>
+              </div>
+            </div>
+            <div className="text-right">
+              <p className="text-lg font-bold text-[#0066FF]">
+                {trip.pricePerSeat}€ / place
+              </p>
+              <p className="text-xs text-gray-500">
+                {trip.seatsAvailable} place(s) restantes
+              </p>
+            </div>
+          </div>
+
+          <div className="rounded-[1.5rem] bg-gray-50 p-4">
+            <div className="space-y-4 border-l-2 border-gray-200 pl-4">
+              <div>
+                <p className="text-sm font-semibold text-gray-900">
+                  {trip.departureTime} • Depart
+                </p>
+                <p className="text-sm text-gray-500">{trip.fromLabel}</p>
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-gray-900">
+                  {trip.arrivalTime} • Destination
+                </p>
+                <p className="text-sm text-gray-500">{trip.toLabel}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge className="border-0 bg-blue-50 text-[#0066FF] hover:bg-blue-50">
+              {trip.dateLabel}
+            </Badge>
+            {trip.kind === 'available' ? (
+              <Badge className="border-0 bg-emerald-100 text-emerald-700 hover:bg-emerald-100">
+                Chauffeur disponible maintenant
+              </Badge>
+            ) : null}
+            {trip.stopovers?.length ? (
+              <Badge className="border-0 bg-slate-100 text-slate-700 hover:bg-slate-100">
+                {trip.stopovers.length} arret(s) intermediaire(s)
+              </Badge>
+            ) : null}
+          </div>
+        </CardContent>
+      </Card>
+    );
+  };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col pb-20">
-      {/* Header */}
-      <div className="bg-white px-4 pt-12 pb-4 shadow-sm z-10">
-        <div className="flex items-center justify-between mb-4">
-          <button
-            onClick={() => navigate('home')}
-            className="p-2 -ml-2 text-gray-600">
-            
-            <ArrowLeft className="w-6 h-6" />
-          </button>
-          <h1 className="text-lg font-bold text-gray-900">Résultats</h1>
-          <button className="p-2 -mr-2 text-gray-600">
-            <Filter className="w-5 h-5" />
+    <div className="min-h-screen bg-gray-50 pb-24">
+      <div className="bg-white px-4 pb-5 pt-12 shadow-sm">
+        <div className="mb-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => navigate('home')}
+              className="rounded-full bg-gray-100 p-2 text-gray-600"
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </button>
+            <div>
+              <h1 className="text-xl font-bold text-gray-900">Recherche</h1>
+              <p className="text-sm text-gray-500">
+                Le passager cherche ici un conducteur.
+              </p>
+            </div>
+          </div>
+          <button className="rounded-full bg-gray-100 p-2 text-gray-600">
+            <SlidersHorizontal className="h-5 w-5" />
           </button>
         </div>
 
-        <div className="flex items-center justify-between bg-gray-100 p-3 rounded-lg text-sm">
-          <div className="flex items-center space-x-2">
-            <span className="font-semibold">Paris</span>
-            <span className="text-gray-400">→</span>
-            <span className="font-semibold">Lyon</span>
+        <div className="rounded-[1.75rem] bg-[#f4f7fb] p-4">
+          <div className="space-y-3">
+            <div className="relative">
+              <MapPin className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#0066FF]" />
+              <Input
+                value={filters.from}
+                onChange={(event) =>
+                  setFilters((current) => ({ ...current, from: event.target.value }))
+                }
+                className="h-12 rounded-2xl border-none bg-white pl-10 shadow-none"
+                placeholder="Depart"
+              />
+            </div>
+            <div className="relative">
+              <MapPin className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#00C9A7]" />
+              <Input
+                value={filters.to}
+                onChange={(event) =>
+                  setFilters((current) => ({ ...current, to: event.target.value }))
+                }
+                className="h-12 rounded-2xl border-none bg-white pl-10 shadow-none"
+                placeholder="Destination"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="relative">
+                <Calendar className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                <Input
+                  type="date"
+                  value={filters.date}
+                  onChange={(event) =>
+                    setFilters((current) => ({ ...current, date: event.target.value }))
+                  }
+                  className="h-12 rounded-2xl border-none bg-white pl-10 shadow-none"
+                />
+              </div>
+              <div className="relative">
+                <Users className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                <Input
+                  type="number"
+                  min="1"
+                  max="4"
+                  value={filters.seats}
+                  onChange={(event) =>
+                    setFilters((current) => ({ ...current, seats: event.target.value }))
+                  }
+                  className="h-12 rounded-2xl border-none bg-white pl-10 shadow-none"
+                />
+              </div>
+            </div>
+            <Button className="h-12 rounded-2xl bg-gradient-to-r from-[#0066FF] to-[#00C9A7] text-white">
+              <Search className="mr-2 h-4 w-4" />
+              Mettre a jour les resultats
+            </Button>
           </div>
-          <span className="text-gray-500">Auj.</span>
         </div>
       </div>
 
       <Tabs
-        defaultValue="list"
-        className="flex-1 flex flex-col w-full"
-        onValueChange={setView}>
-        
-        <div className="px-4 py-3 bg-white border-b border-gray-100">
-          <TabsList className="w-full grid grid-cols-2">
-            <TabsTrigger value="list">Liste</TabsTrigger>
-            <TabsTrigger value="map">Carte</TabsTrigger>
+        className="w-full"
+        value={view}
+        onValueChange={(value) => setView(value as 'list' | 'map')}
+      >
+        <div className="px-4 py-4">
+          <TabsList className="grid w-full grid-cols-2 rounded-2xl bg-white p-1 shadow-sm">
+            <TabsTrigger value="list" className="rounded-xl">
+              Liste
+            </TabsTrigger>
+            <TabsTrigger value="map" className="rounded-xl">
+              Carte
+            </TabsTrigger>
           </TabsList>
         </div>
 
-        <TabsContent value="list" className="flex-1 p-4 space-y-4 m-0">
-          {trips.map((trip) =>
-          <Card
-            key={trip.id}
-            className="cursor-pointer hover:shadow-md transition-shadow"
-            onClick={() =>
-            navigate('trip-detail', {
-              id: trip.id
-            })
-            }>
-            
-              <CardContent className="p-4">
-                <div className="flex justify-between items-start mb-4">
-                  <div className="flex items-center space-x-3">
-                    <Avatar>
-                      <AvatarImage
-                      src={`https://i.pravatar.cc/150?u=${trip.id}`} />
-                    
-                      <AvatarFallback>{trip.driver.charAt(0)}</AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <p className="font-semibold text-sm">{trip.driver}</p>
-                      <div className="flex items-center text-xs text-gray-500">
-                        <span className="text-yellow-500 mr-1">★</span>{' '}
-                        {trip.rating}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <span className="font-bold text-lg text-[#0066FF]">
-                      {trip.price}€
-                    </span>
-                    <p className="text-xs text-gray-500">{trip.seats} places</p>
-                  </div>
-                </div>
+        <TabsContent value="list" className="space-y-4 px-4">
+          <Card className="border-none bg-slate-950 text-white shadow-lg">
+            <CardContent className="flex items-center justify-between gap-4 px-5 py-4">
+              <div>
+                <p className="text-base font-semibold">
+                  {results.length} conducteur(s) correspondent
+                </p>
+                <p className="text-sm text-white/65">
+                  Vue liste pour comparer prix, places et destination.
+                </p>
+              </div>
+              <div className="rounded-2xl bg-white/10 p-3">
+                <Car className="h-5 w-5 text-[#00C9A7]" />
+              </div>
+            </CardContent>
+          </Card>
 
-                <div className="relative pl-4 border-l-2 border-gray-200 space-y-4 ml-2">
-                  <div className="relative">
-                    <div className="absolute -left-[21px] top-1 w-3 h-3 bg-white border-2 border-[#0066FF] rounded-full"></div>
-                    <p className="text-sm font-semibold">{trip.time}</p>
-                    <p className="text-xs text-gray-500">{trip.from}</p>
-                  </div>
-                  <div className="relative">
-                    <div className="absolute -left-[21px] top-1 w-3 h-3 bg-[#00C9A7] rounded-full"></div>
-                    <p className="text-sm font-semibold">Arrivée estimée</p>
-                    <p className="text-xs text-gray-500">{trip.to}</p>
-                  </div>
-                </div>
-
-                {trip.type === 'available' &&
-              <div className="mt-4 pt-3 border-t border-gray-100">
-                    <Badge
-                  variant="secondary"
-                  className="bg-teal-50 text-[#00C9A7] hover:bg-teal-50">
-                  
-                      Chauffeur disponible maintenant
-                    </Badge>
-                  </div>
-              }
-              </CardContent>
-            </Card>
-          )}
+          {results.map((trip) => renderTripCard(trip.id))}
         </TabsContent>
 
-        <TabsContent value="map" className="flex-1 m-0 relative">
-          {/* Placeholder Map */}
-          <div className="absolute inset-0 bg-blue-50 flex items-center justify-center">
-            <div className="text-center">
-              <MapPin className="w-12 h-12 text-[#0066FF] mx-auto mb-2 opacity-50" />
-              <p className="text-gray-500 font-medium">Carte interactive</p>
-              <p className="text-sm text-gray-400">
-                Affichage des trajets et chauffeurs
-              </p>
+        <TabsContent value="map" className="m-0">
+          <div className="relative h-[calc(100vh-250px)] px-4 pb-4">
+            <MapPlaceholder
+              className="h-full w-full"
+              title="Mode carte distinct"
+              subtitle="Prototype Mapbox a personnaliser pour les trajets et les zones"
+            />
+            <div className="absolute left-8 top-6 rounded-full border border-white/15 bg-slate-950/70 px-4 py-2 text-sm font-medium text-white backdrop-blur-md">
+              {results.length} resultats autour de {filters.from}
             </div>
-
-            {/* Mock Map Pins */}
-            <div className="absolute top-1/4 left-1/4 w-8 h-8 bg-white rounded-full shadow-lg flex items-center justify-center border-2 border-[#0066FF]">
-              <Car className="w-4 h-4 text-[#0066FF]" />
-            </div>
-            <div className="absolute top-1/2 right-1/3 w-8 h-8 bg-white rounded-full shadow-lg flex items-center justify-center border-2 border-[#00C9A7]">
-              <Car className="w-4 h-4 text-[#00C9A7]" />
-            </div>
+            <SlidingPanel className="mx-4" initialSnap={36} snapPoints={[28, 56, 88]}>
+              <div className="space-y-4 pb-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h2 className="text-lg font-bold text-gray-900">
+                      Resultats sur carte
+                    </h2>
+                    <p className="text-sm text-gray-500">
+                      La liste reste accessible, la carte sert a comparer les zones.
+                    </p>
+                  </div>
+                  <div className="rounded-full bg-blue-50 p-3 text-[#0066FF]">
+                    <Map className="h-5 w-5" />
+                  </div>
+                </div>
+                {results.map((trip) => renderTripCard(trip.id))}
+              </div>
+            </SlidingPanel>
           </div>
         </TabsContent>
       </Tabs>
-    </div>);
-
+    </div>
+  );
 }

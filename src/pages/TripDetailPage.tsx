@@ -1,131 +1,212 @@
 import React from 'react';
 import {
   ArrowLeft,
+  Car,
+  CreditCard,
   MapPin,
-  Clock,
-  ShieldCheck,
   MessageCircle,
+  ShieldCheck,
   Star,
-  Info } from
-'lucide-react';
+} from 'lucide-react';
+import { Avatar, AvatarFallback, AvatarImage } from '../components/Avatar';
+import { Badge } from '../components/Badge';
 import { Button } from '../components/Button';
 import { Card, CardContent } from '../components/Card';
-import { Avatar, AvatarFallback, AvatarImage } from '../components/Avatar';
-import { Separator } from '../components/Separator';
+import { getProfileById, getTripById } from '../data/mockData';
+
 interface TripDetailPageProps {
   navigate: (page: string, data?: any) => void;
+  pageData?: {
+    tripId?: string;
+    returnTo?: string;
+  } | null;
 }
-export function TripDetailPage({ navigate }: TripDetailPageProps) {
+
+export function TripDetailPage({ navigate, pageData }: TripDetailPageProps) {
+  const trip = getTripById(pageData?.tripId);
+  const driver = getProfileById(trip.driverId);
+  const returnTo = pageData?.returnTo ?? 'search';
+
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
-      {/* Header */}
-      <div className="bg-white px-4 pt-12 pb-4 shadow-sm z-10 sticky top-0">
+    <div className="min-h-screen bg-gray-50 pb-28">
+      <div className="sticky top-0 z-10 bg-white px-4 pb-4 pt-12 shadow-sm">
         <div className="flex items-center justify-between">
           <button
-            onClick={() => navigate('search')}
-            className="p-2 -ml-2 text-gray-600">
-            
-            <ArrowLeft className="w-6 h-6" />
+            onClick={() => navigate(returnTo)}
+            className="rounded-full bg-gray-100 p-2 text-gray-600"
+          >
+            <ArrowLeft className="h-5 w-5" />
           </button>
-          <h1 className="text-lg font-bold text-gray-900">Détails du trajet</h1>
-          <div className="w-10"></div> {/* Spacer for centering */}
+          <h1 className="text-lg font-bold text-gray-900">Details du trajet</h1>
+          <div className="w-10" />
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto pb-24">
-        {/* Date & Route */}
-        <div className="bg-white p-6 mb-2">
-          <h2 className="text-xl font-bold text-gray-900 mb-6">Aujourd'hui</h2>
-
-          <div className="relative pl-6 border-l-2 border-gray-200 space-y-8 ml-2">
-            <div className="relative">
-              <div className="absolute -left-[29px] top-1 w-4 h-4 bg-white border-4 border-[#0066FF] rounded-full"></div>
-              <div className="flex justify-between items-start">
-                <div>
-                  <p className="text-lg font-bold text-gray-900">14:30</p>
-                  <p className="text-base font-medium text-gray-800">Paris</p>
-                  <p className="text-sm text-gray-500 mt-1">
-                    Gare de Lyon, Hall 1
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="relative">
-              <div className="absolute -left-[29px] top-1 w-4 h-4 bg-[#00C9A7] rounded-full"></div>
-              <div className="flex justify-between items-start">
-                <div>
-                  <p className="text-lg font-bold text-gray-900">18:00</p>
-                  <p className="text-base font-medium text-gray-800">Lyon</p>
-                  <p className="text-sm text-gray-500 mt-1">Gare Part-Dieu</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Price */}
-        <div className="bg-white p-4 mb-2 flex justify-between items-center">
-          <span className="text-gray-600 font-medium">
-            Prix total pour 1 passager
-          </span>
-          <span className="text-2xl font-bold text-[#0066FF]">25,00 €</span>
-        </div>
-
-        {/* Driver Info */}
-        <div className="bg-white p-4 mb-2">
-          <div className="flex justify-between items-center mb-4">
-            <div className="flex items-center space-x-4">
-              <Avatar className="w-14 h-14">
-                <AvatarImage src="https://i.pravatar.cc/150?u=1" />
-                <AvatarFallback>SM</AvatarFallback>
-              </Avatar>
+      <div className="space-y-4 px-4 py-4">
+        <Card className="border-none bg-gradient-to-br from-slate-950 via-slate-900 to-[#0b4aa2] text-white shadow-xl">
+          <CardContent className="space-y-4 px-5 py-5">
+            <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-lg font-bold text-gray-900">Sophie M.</h3>
-                <div className="flex items-center text-sm text-gray-600">
-                  <Star className="w-4 h-4 text-yellow-500 mr-1 fill-current" />
-                  <span className="font-medium mr-1">4.9</span>
-                  <span>(42 avis)</span>
-                </div>
+                <p className="text-2xl font-bold">
+                  {trip.fromCity} {'->'} {trip.toCity}
+                </p>
+                <p className="mt-1 text-sm text-white/70">{trip.dateLabel}</p>
+              </div>
+              <Badge className="border-0 bg-white/10 text-white hover:bg-white/10">
+                {trip.kind === 'available' ? 'Mode dispo' : 'Trajet planifie'}
+              </Badge>
+            </div>
+            <p className="text-sm text-white/75">
+              Prix affiche clairement par place. La destination est distinguee de
+              l'heure d'arrivee.
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="border-none shadow-sm">
+          <CardContent className="space-y-4 px-5 py-5">
+            <div className="space-y-4 border-l-2 border-gray-200 pl-4">
+              <div>
+                <p className="text-sm font-semibold text-gray-900">
+                  {trip.departureTime} • Depart
+                </p>
+                <p className="text-sm text-gray-500">{trip.fromLabel}</p>
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-gray-900">
+                  {trip.arrivalTime} • Destination
+                </p>
+                <p className="text-sm text-gray-500">{trip.toLabel}</p>
               </div>
             </div>
-            <button
-              className="p-3 bg-blue-50 text-[#0066FF] rounded-full"
-              onClick={() =>
-              navigate('chat', {
-                id: 1,
-                name: 'Sophie M.'
-              })
-              }>
-              
-              <MessageCircle className="w-6 h-6" />
-            </button>
-          </div>
 
-          <Separator className="my-4" />
+            {trip.stopovers?.length ? (
+              <div className="rounded-[1.5rem] bg-gray-50 p-4">
+                <p className="mb-2 text-sm font-semibold text-gray-900">
+                  Arrets intermediaires
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {trip.stopovers.map((stopover) => (
+                    <span
+                      key={stopover}
+                      className="rounded-full bg-white px-3 py-1 text-xs font-medium text-gray-600"
+                    >
+                      {stopover}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            ) : null}
 
-          <div className="space-y-3">
-            <div className="flex items-center text-gray-700">
-              <ShieldCheck className="w-5 h-5 text-[#00C9A7] mr-3" />
-              <span className="text-sm">Identité vérifiée</span>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="rounded-[1.25rem] bg-gray-50 px-4 py-3">
+                <p className="text-xs text-gray-500">Prix</p>
+                <p className="mt-1 text-lg font-bold text-[#0066FF]">
+                  {trip.pricePerSeat}€ / place
+                </p>
+              </div>
+              <div className="rounded-[1.25rem] bg-gray-50 px-4 py-3">
+                <p className="text-xs text-gray-500">Places restantes</p>
+                <p className="mt-1 text-lg font-bold text-gray-900">
+                  {trip.seatsAvailable}
+                </p>
+              </div>
             </div>
-            <div className="flex items-center text-gray-700">
-              <Info className="w-5 h-5 text-gray-400 mr-3" />
-              <span className="text-sm">Peugeot 208 • Blanche</span>
+          </CardContent>
+        </Card>
+
+        <Card className="border-none shadow-sm">
+          <CardContent className="space-y-4 px-5 py-5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() =>
+                    navigate('public-profile', {
+                      profileId: driver.id,
+                      returnTo: 'trip-detail',
+                      returnData: {
+                        tripId: trip.id,
+                        returnTo,
+                      },
+                    })
+                  }
+                >
+                  <Avatar className="h-14 w-14">
+                    <AvatarImage src={driver.avatar} />
+                    <AvatarFallback>{driver.name.charAt(0)}</AvatarFallback>
+                  </Avatar>
+                </button>
+                <div>
+                  <p className="font-semibold text-gray-900">{driver.name}</p>
+                  <div className="mt-1 flex items-center gap-1 text-sm text-gray-500">
+                    <Star className="h-4 w-4 fill-current text-amber-400" />
+                    {driver.rating} • {driver.reviews} avis
+                  </div>
+                </div>
+              </div>
+              <Button
+                variant="outline"
+                className="rounded-2xl"
+                onClick={() =>
+                  navigate('chat', {
+                    conversationId:
+                      driver.id === 'marc'
+                        ? 'conv-2'
+                        : driver.id === 'julie'
+                          ? 'conv-3'
+                          : 'conv-1',
+                    returnTo: 'trip-detail',
+                  })
+                }
+              >
+                <MessageCircle className="mr-2 h-4 w-4" />
+                Chat
+              </Button>
             </div>
-          </div>
-        </div>
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="rounded-[1.25rem] bg-gray-50 px-4 py-3 text-sm text-gray-700">
+                <div className="mb-1 flex items-center gap-2 font-semibold text-gray-900">
+                  <ShieldCheck className="h-4 w-4 text-[#00C9A7]" />
+                  Verification
+                </div>
+                Identite verifiee
+              </div>
+              <div className="rounded-[1.25rem] bg-gray-50 px-4 py-3 text-sm text-gray-700">
+                <div className="mb-1 flex items-center gap-2 font-semibold text-gray-900">
+                  <Car className="h-4 w-4 text-[#0066FF]" />
+                  Vehicule
+                </div>
+                {trip.vehicle}
+              </div>
+            </div>
+
+            <div className="rounded-[1.25rem] bg-gray-50 px-4 py-3 text-sm text-gray-600">
+              <div className="mb-1 flex items-center gap-2 font-semibold text-gray-900">
+                <MapPin className="h-4 w-4 text-[#0066FF]" />
+                Point de rencontre
+              </div>
+              Precisions d'adresse ou localisation a enrichir ensuite via le chat.
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
-      {/* Bottom Action Bar */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 pb-safe z-50">
+      <div className="fixed bottom-0 left-0 right-0 border-t border-gray-200 bg-white p-4 pb-safe">
         <Button
-          className="w-full bg-gradient-to-r from-[#0066FF] to-[#00C9A7] hover:opacity-90 text-white h-14 text-lg rounded-xl shadow-lg"
-          onClick={() => navigate('booking-confirmation')}>
-          
-          Continuer
+          className="h-12 w-full rounded-2xl bg-gradient-to-r from-[#0066FF] to-[#00C9A7] text-white"
+          onClick={() =>
+            navigate('booking-confirmation', {
+              tripId: trip.id,
+              returnTo: 'trip-detail',
+            })
+          }
+        >
+          <CreditCard className="mr-2 h-4 w-4" />
+          Continuer vers la reservation
         </Button>
       </div>
-    </div>);
-
+    </div>
+  );
 }
